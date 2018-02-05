@@ -18,7 +18,8 @@ library(sp)
 #Mexico: 28 locations 
 #Both have been removed from this data.
 
-insight <- read.csv("")
+insight <- read.csv("/Users/jeffkropelnicki/Desktop/Winfield files/2017 Corn Answer Plot Master list.csv")
+
 insight <- insight %>% select(TrialName, GrowerName, latitude = FarmLatitude, longitude = FarmLongitude, GrowerState) %>% filter(!is.na(latitude), !is.na(longitude), longitude != -57.86900)
 
 #Remove duplicate
@@ -64,7 +65,9 @@ ggplot() +
 #Need to remove Canada and Mexico because I cant get soil data out of the USA
 #Canada: QC = 62, ON = 19 means we lose 81 locations 
 #Mexico: (loc 11) = 2, (loc 5) = 12, (loc 8) = 14 means we lose 28 locations 
-locations <- insight %>% filter(GrowerState != "QC", GrowerState != "11", GrowerState != "5", GrowerState != "8", GrowerState != "ON") %>% select(ID, latitude, longitude, GrowerName)
+locations <- insight %>% filter(GrowerState != "QC", GrowerState != "11", GrowerState != "5", GrowerState != "8", GrowerState != "ON") %>% select(ID, latitude, longitude)
+
+locations <- insight %>% filter(State != "CA", State != "QC") %>% select(ID, latitude, longitude)
 
 #locations <- locations[1:2,]
 #Data frame of lat lon
@@ -75,6 +78,7 @@ soil <- SpatialPointsDataFrame(coords = xy, data = locations,
                                proj4string = CRS("+proj=longlat +datum=WGS84"))
 
 #Get soil data https://cran.r-project.org/web/packages/soilDB/soilDB.pdf
+#http://ncss-tech.github.io/AQP/soilDB/SDA-tutorial.html
 system.time(soil <-SDA_query_features(soil, id='ID'))
 
 
@@ -83,7 +87,7 @@ mid_soil <- soil %>% separate(muname, c("soil", "sand", "slope", "con"), ", ") %
              select(ID, soil) 
 
 
-mid_soil  <- left_join(mid_soil, locations, by = "ID")
+mid_soil  <- left_join(mid_soil, insight, by = "ID")
 
 #write.csv(mid_soil, "not_clean_insight_soil_data.csv")
 
@@ -93,6 +97,7 @@ clean_soil <- mid_soil
 
 clean_soil$soil <- gsub("\\s*\\([^\\)]+\\)\\s*$","",clean_soil$soil)
 clean_soil$soil[clean_soil$soil == "loams"] <- "loam"
+clean_soil$soil <- gsub("sands", "sand", clean_soil$soil)
 clean_soil$soil <- gsub("clays", "clay", clean_soil$soil)
 clean_soil$soil <- gsub("loams", "loam", clean_soil$soil)
 clean_soil$soil <- gsub("very ", "", clean_soil$soil)
@@ -140,6 +145,7 @@ clean_soil$soil <- gsub("Prairie ", "", clean_soil$soil)
 clean_soil$soil <- gsub("Shelby ", "", clean_soil$soil)
 clean_soil$soil <- gsub(" (occasionally flooded)", "", clean_soil$soil)
 clean_soil$soil <- gsub("Uly ", "", clean_soil$soil)
+clean_soil$soil <- gsub("outcrop-Nordness ", "", clean_soil$soil)
 
 clean_soil <- clean_soil %>% filter(soil != "(Nauvoo) fine sandy loam",
                                     soil != "soils",
@@ -165,35 +171,33 @@ n4 <- clean_soil %>% group_by(soil) %>%
 
 map_soil <- clean_soil 
 map_soil$soil_texture <- map_soil$soil
-map_soil$soil_texture[ map_soil$soil_texture ==  "loam" ] <- "medium"
-map_soil$soil_texture[ map_soil$soil_texture ==  "silt loam" ] <- "medium"
-map_soil$soil_texture[ map_soil$soil_texture ==  "silty clay loam" ] <- "fine"
-map_soil$soil_texture[ map_soil$soil_texture ==  "complex" ] <- "medium"
-map_soil$soil_texture[ map_soil$soil_texture ==  "clay loam" ] <- "fine"
-map_soil$soil_texture[ map_soil$soil_texture ==  "fine sandy loam" ] <- "coarse"
-map_soil$soil_texture[ map_soil$soil_texture ==  "sandy loam" ] <- "coarse"
-map_soil$soil_texture[ map_soil$soil_texture ==  "loamy fine sand" ] <- "coarse"
-map_soil$soil_texture[ map_soil$soil_texture ==  "clay" ] <- "fine"
-map_soil$soil_texture[ map_soil$soil_texture ==  "loamy sand" ] <- "coarse"
-map_soil$soil_texture[ map_soil$soil_texture ==  "silty clay" ] <- "fine"
-map_soil$soil_texture[ map_soil$soil_texture ==  "fine sand" ] <- "coarse"
-map_soil$soil_texture[ map_soil$soil_texture ==  "sand" ] <- "coarse"
-map_soil$soil_texture[ map_soil$soil_texture ==  "muck" ] <- "fine"
-map_soil$soil_texture[ map_soil$soil_texture ==  "Black clay" ] <- "fine"
-map_soil$soil_texture[ map_soil$soil_texture ==  "sandy clay loam" ] <- "medium"
+map_soil$soil_texture[ map_soil$soil_texture ==  "loam" ] <- "Medium"
+map_soil$soil_texture[ map_soil$soil_texture ==  "silt loam" ] <- "Medium"
+map_soil$soil_texture[ map_soil$soil_texture ==  "silty clay loam" ] <- "Fine"
+map_soil$soil_texture[ map_soil$soil_texture ==  "complex" ] <- "Medium"
+map_soil$soil_texture[ map_soil$soil_texture ==  "clay loam" ] <- "Fine"
+map_soil$soil_texture[ map_soil$soil_texture ==  "fine sandy loam" ] <- "Coarse"
+map_soil$soil_texture[ map_soil$soil_texture ==  "sandy loam" ] <- "Coarse"
+map_soil$soil_texture[ map_soil$soil_texture ==  "loamy fine sand" ] <- "Coarse"
+map_soil$soil_texture[ map_soil$soil_texture ==  "clay" ] <- "Fine"
+map_soil$soil_texture[ map_soil$soil_texture ==  "loamy sand" ] <- "Coarse"
+map_soil$soil_texture[ map_soil$soil_texture ==  "silty clay" ] <- "Fine"
+map_soil$soil_texture[ map_soil$soil_texture ==  "fine sand" ] <- "Coarse"
+map_soil$soil_texture[ map_soil$soil_texture ==  "sand" ] <- "Coarse"
+map_soil$soil_texture[ map_soil$soil_texture ==  "muck" ] <- "Fine"
+map_soil$soil_texture[ map_soil$soil_texture ==  "Black clay" ] <- "Fine"
+map_soil$soil_texture[ map_soil$soil_texture ==  "sandy clay loam" ] <- "Medium"
 
-map_soil <- map_soil %>% select(GrowerName, soil, soil_texture, latitude, longitude)
-write_csv(map_soil, "soybean insight soil data.csv")
+map_soil <- map_soil %>% select(Book.Name, soil, Soil.Texture, soil_texture, latitude, longitude)
+
+map_soil <- map_soil %>% summarise(see = map_soil$Soil.Texture ==  map_soil$soil_texture)
+
+#write_csv(map_soil, "soybean insight soil data.csv")
 
 
 n5 <- map_soil %>% group_by(soil_texture) %>%
   summarise(count = n()) %>%
   arrange(desc(count))
-
-
-
-
-
 
 
 
